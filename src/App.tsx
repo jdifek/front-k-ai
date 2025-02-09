@@ -95,11 +95,7 @@ function App() {
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"
             >
-              {isSidebarOpen ? (
-                <PanelLeftClose size={20} />
-              ) : (
-                <PanelLeftOpen size={20} />
-              )}
+              {!isSidebarOpen && <PanelLeftClose size={20} />}
             </button>
             <span className="text-[#7C3AED] text-xl">✨</span>
             <button
