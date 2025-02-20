@@ -183,21 +183,28 @@ function App() {
       console.error("Ошибка при удалении чата:", error);
     }
   };
-  // Функция для имитации печати AI
+
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printInterval, setPrintInterval] = useState<NodeJS.Timeout | null>(
+    null
+  );
+
   const printMessage = (message: string) => {
     let i = 0;
     const cleanMessage = message.replace(/['"]/g, ""); // Убираем кавычки, если есть
 
     setMessages((prevMessages) => [
       ...prevMessages,
-      { role: "assistant", content: "" }, // Добавляем пустое сообщение перед анимацией
+      { role: "assistant", content: "" },
     ]);
+
+    setIsPrinting(true); // Включаем печать
 
     const intervalId = setInterval(() => {
       setMessages((prevMessages) => {
         return prevMessages.map((msg, index) => {
           if (index === prevMessages.length - 1 && msg.role === "assistant") {
-            return { ...msg, content: cleanMessage.slice(0, i + 1) }; // Вместо посимвольного добавления
+            return { ...msg, content: cleanMessage.slice(0, i + 1) };
           }
           return msg;
         });
@@ -206,8 +213,20 @@ function App() {
       i++;
       if (i >= cleanMessage.length) {
         clearInterval(intervalId);
+        setIsPrinting(false); // Завершаем печать
       }
     }, 50);
+
+    setPrintInterval(intervalId);
+  };
+
+  // Функция остановки печати
+  const stopPrinting = () => {
+    if (printInterval) {
+      clearInterval(printInterval);
+      setPrintInterval(null);
+      setIsPrinting(false);
+    }
   };
 
   // Когда приходит новый чанк от AI, используем функцию printMessage
@@ -293,6 +312,8 @@ function App() {
           messages={messages}
           input={input}
           setinput={setinput}
+          stopPrinting={stopPrinting}
+          isPrinting={isPrinting}
           handleSendMessageWithStream={handleSendMessageWithStream}
         />
       </div>

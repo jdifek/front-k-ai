@@ -1,6 +1,8 @@
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 
 interface InputAreaProps {
+  stopPrinting: () => void;
+  isPrinting: boolean; // ⬅️ Добавили isTyping
   messages: {
     role: string;
     content: string;
@@ -12,7 +14,9 @@ interface InputAreaProps {
 
 export const InputArea = ({
   messages,
+  stopPrinting,
   input,
+  isPrinting,
   setinput,
   handleSendMessageWithStream,
 }: InputAreaProps) => {
@@ -38,7 +42,21 @@ export const InputArea = ({
           }}
           className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-[#7C3AED] rounded-lg hover:bg-[#6D28D9]"
         >
-          <ArrowUp onClick={() => setinput("")} size={20} />
+          {isPrinting ? (
+            <Square
+              onClick={() => {
+                if (isPrinting) {
+                  stopPrinting();
+                } else if (input.length > 0) {
+                  handleSendMessageWithStream(input);
+                }
+              }}
+              size={20}
+            />
+          ) : (
+            <ArrowUp onClick={() => setinput("")} size={20} />
+          )}{" "}
+          {/* ⬅️ Меняем иконку */}
         </button>
       </div>
 

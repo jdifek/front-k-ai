@@ -10,6 +10,8 @@ type MainContentProps = {
   isDarkMode: boolean;
   messages: { role: string; content: string }[];
   input: string;
+  isPrinting: boolean;
+  stopPrinting: () => void;
   setinput: React.Dispatch<React.SetStateAction<string>>;
   handleSendMessageWithStream: (userMessage: string) => Promise<void>;
 };
@@ -19,6 +21,8 @@ const ChatArea: React.FC<MainContentProps> = ({
   isDarkMode,
   messages,
   input,
+  stopPrinting,
+  isPrinting,
   setinput,
   handleSendMessageWithStream,
 }) => {
@@ -79,6 +83,9 @@ const ChatArea: React.FC<MainContentProps> = ({
         messages={messages}
         input={input}
         setinput={setinput}
+        isPrinting={isPrinting} // ⬅️ Передаем состояние
+        stopPrinting={stopPrinting} // ⬅️ Передаем состояние
+
         handleSendMessageWithStream={handleSendMessageWithStream}
       />
     </div>
