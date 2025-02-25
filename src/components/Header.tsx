@@ -51,39 +51,41 @@ const Header: React.FC<HeaderProps> = ({
           {!isSidebarOpen && <PanelLeftOpen size={20} />}
         </button>
         <span className="text-[#7C3AED] text-xl">✨</span>
-        <button
-          onClick={() => setIsVersionDropdownOpen(!isVersionDropdownOpen)}
-          className={`${
-            isDarkMode
-              ? "text-white hover:bg-gray-800"
-              : "text-black hover:bg-gray-200"
-          } flex items-center gap-2 px-2 py-1 rounded-lg max-w-[140px] md:max-w-none overflow-hidden text-ellipsis whitespace-nowrap`}
-        >
-          <span>{selectedVersion}</span>
-          <ChevronDown
-            size={20}
-            className={`${
-              isDarkMode
-                ? "text-white hover:bg-gray-800"
-                : "text-black hover:bg-gray-200"
-            } flex-shrink-0`}
-          />
-        </button>
+        <span className="text-white ml-2">Fary3.5-Ultra</span>
 
-        {/* Version Dropdown */}
-        {isVersionDropdownOpen && (
-          <div className="absolute top-full left-0 mt-2 w-48 bg-[#1F1F1F] rounded-lg shadow-lg border border-gray-800 py-1 z-30">
-            {versions.map((version) => (
-              <button
-                key={version}
-                onClick={() => handleVersionSelect(version)}
-                className="w-full text-left px-4 py-2 hover:bg-gray-800 text-gray-300"
-              >
-                {version}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* Закомментированный селект */}
+        {/* <button
+  onClick={() => setIsVersionDropdownOpen(!isVersionDropdownOpen)}
+  className={`${
+    isDarkMode
+      ? "text-white hover:bg-gray-800"
+      : "text-black hover:bg-gray-200"
+  } flex items-center gap-2 px-2 py-1 rounded-lg max-w-[140px] md:max-w-none overflow-hidden text-ellipsis whitespace-nowrap`}
+>
+  <span>{selectedVersion}</span>
+  <ChevronDown
+    size={20}
+    className={`${
+      isDarkMode
+        ? "text-white hover:bg-gray-800"
+        : "text-black hover:bg-gray-200"
+    } flex-shrink-0`}
+  />
+</button>
+
+{isVersionDropdownOpen && (
+  <div className="absolute top-full left-0 mt-2 w-48 bg-[#1F1F1F] rounded-lg shadow-lg border border-gray-800 py-1 z-30">
+    {versions.map((version) => (
+      <button
+        key={version}
+        onClick={() => handleVersionSelect(version)}
+        className="w-full text-left px-4 py-2 hover:bg-gray-800 text-gray-300"
+      >
+        {version}
+      </button>
+    ))}
+  </div>
+)} */}
       </div>
 
       <div className="flex gap-2 md:gap-3">

@@ -6,8 +6,9 @@ export const registerUser = async (params: {
 }) => {
   try {
     await $api.post("/api/auth/register", params);
+    return true;
   } catch (error) {
     console.error("Ошибка при Регистрации:", error);
+    return false;
   }
 };
-

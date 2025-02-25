@@ -18,9 +18,41 @@ export const RegisterModal = ({
 }: RegisterModalProps) => {
   const [inputPassword, setinputPassword] = useState("");
   const [inputEmail, setinputEmail] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+    {}
+  );
 
-  const handleRegisterUser = (email: string, password: string) => {
-    registerUser({ email, password });
+  const validateForm = () => {
+    const newErrors: { email?: string; password?: string } = {};
+
+    if (!inputEmail.trim()) {
+      newErrors.email = "Введите email";
+    } else if (!/^[\w.-]+@[a-zA-Z\d.-]+\.[a-zA-Z]{2,}$/.test(inputEmail)) {
+      newErrors.email = "Введите корректный email";
+    }
+
+    // Валидация пароля
+    if (!inputPassword.trim()) {
+      newErrors.password = "Введите пароль";
+    } else if (inputPassword.length < 6) {
+      newErrors.password = "Пароль должен содержать минимум 6 символов";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleRegisterUser = async () => {
+    if (!validateForm()) return;
+
+    const success = await registerUser({
+      email: inputEmail,
+      password: inputPassword,
+    });
+
+    if (success) {
+      setIsRegisterModalOpen(false); // Закрываем модалку при успехе
+    }
   };
 
   return (
@@ -48,6 +80,9 @@ export const RegisterModal = ({
                 className="w-full pl-10 p-3 rounded-lg bg-[#2F2F2F] border border-gray-700 text-gray-200 placeholder-gray-500"
               />
             </div>
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
           </div>
           <div>
             <div className="relative">
@@ -63,9 +98,12 @@ export const RegisterModal = ({
                 className="w-full pl-10 p-3 rounded-lg bg-[#2F2F2F] border border-gray-700 text-gray-200 placeholder-gray-500"
               />
             </div>
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+            )}
           </div>
           <button
-            onClick={() => handleRegisterUser(inputEmail, inputPassword)}
+            onClick={handleRegisterUser}
             className="w-full py-3 bg-[#7C3AED] rounded-lg font-medium hover:bg-[#6D28D9]"
           >
             Зарегистрироваться
