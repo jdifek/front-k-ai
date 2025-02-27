@@ -36,7 +36,8 @@ function App() {
   const [activeBarProfile, setActiveBarProfile] = useState(false);
   const [input, setinput] = useState("");
 
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false); // Светлая тема по умолчанию
+  console.log("Current isDarkMode:", isDarkMode); // Отладка
 
   const versions = ["Fary3.0-Max", "Fary3.5-Ultra"];
 
@@ -75,12 +76,13 @@ function App() {
   }, [sessionId]);
 
   useEffect(() => {
+    console.log("Theme update - isDarkMode:", isDarkMode); // Отладка
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
     } else {
       document.documentElement.classList.remove("dark");
     }
-  }, [isDarkMode]);
+  }, [isDarkMode]); // Убедимся, что эффект срабатывает только при изменении isDarkMode
 
   const closeSidebarOnClickOutside = (e: React.MouseEvent) => {
     if (
@@ -107,15 +109,16 @@ function App() {
   const loadChatHistory = async (chatId: string) => {
     try {
       const history = await messageGet(chatId);
-      setMessages(
-        history.map((msg) => ({
+      setMessages((prevMessages) => [
+        ...prevMessages, // Сохраняем существующие сообщения
+        ...history.map((msg) => ({
           role:
             msg.senderType === "USER" || msg.senderType === "GUEST"
               ? "user"
               : "assistant",
           content: msg.content,
-        }))
-      );
+        })),
+      ]);
     } catch (error) {
       console.error("Ошибка при загрузке истории сообщений:", error);
     }
@@ -123,18 +126,6 @@ function App() {
 
   const handleCreateChat = async () => {
     navigate("/chat"); // Переход на стартовую страницу без создания чата
-    // if (!sessionId) {
-    //   console.error("Сессия не найдена!");
-    //   return;
-    // }
-
-    // try {
-    //   const response = await createChat(parseInt(sessionId, 10)); // ✅ Преобразуем sessionId в число
-    //   console.log("Чат создан:", response.data);
-    //   initializeChat();
-    // } catch (error) {
-    //   console.error("Ошибка при создании чата:", error);
-    // }
   };
 
   const initializeChat = async () => {
@@ -148,29 +139,8 @@ function App() {
     } catch (error) {
       console.error("Ошибка при получении чатов:", error);
     }
-
-    // try {
-    //   const response = await ChatGet(parseInt(sessionId, 10));
-    //   setChats(response);
-
-    //   if (response.length === 0) {
-    //     const newChatResponse = await createChat(parseInt(sessionId, 10));
-    //     const newChat = newChatResponse.data;
-    //     const updatedChats = await ChatGet(parseInt(sessionId, 10));
-    //     setChats(updatedChats);
-
-    //     if (newChat && newChat.id) {
-    //       navigate(`/chat/${newChat.id}`);
-    //     } else {
-    //       console.error("Ошибка: новый чат не содержит ID!", newChat);
-    //     }
-    //   } else {
-    //     navigate(`/chat/${response[0].id}`);
-    //   }
-    // } catch (error) {
-    //   console.error("Ошибка при получении чатов:", error);
-    // }
   };
+
   const handleDeleteChat = async (id: string) => {
     if (!sessionId) {
       console.error("Сессия не найдена!");
@@ -238,6 +208,7 @@ function App() {
 
   // Когда приходит новый чанк от AI, используем функцию printMessage
   const handleSendMessageWithStream = async (userMessage: string) => {
+    console.log("Sending message, messages before:", messages); // Отладка
     setinput(""); // Очищаем поле ввода
 
     let currentChatId = chatId;
@@ -260,28 +231,42 @@ function App() {
       }
     }
 
-    // Добавляем сообщение пользователя
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { role: "user", content: userMessage },
-    ]);
+    // Сохраняем сообщение пользователя в состояние сразу и не перезаписываем его
+    const userMessageObj = { role: "user" as const, content: userMessage };
+    setMessages((prevMessages) => [...prevMessages, userMessageObj]);
 
     try {
       const messageHistory = await messageGet(currentChatId);
-      const messages = messageHistory.map((msg) => ({
-        role:
-          msg.senderType === "USER" || msg.senderType === "GUEST"
-            ? "user"
-            : "assistant",
-        content: msg.content,
-      }));
+      // Объединяем историю с нашим сообщением
+      setMessages((prevMessages) => [
+        ...prevMessages.filter(
+          (msg) => msg.role !== "user" || msg.content !== userMessage
+        ), // Убираем дубликаты
+        ...messageHistory.map((msg) => ({
+          role:
+            msg.senderType === "USER" || msg.senderType === "GUEST"
+              ? "user"
+              : "assistant",
+          content: msg.content,
+        })),
+        userMessageObj, // Убеждаемся, что наше сообщение остается
+      ]);
 
-      messages.push({ role: "user", content: userMessage });
+      const messagesToSend = [
+        ...messageHistory.map((msg) => ({
+          role:
+            msg.senderType === "USER" || msg.senderType === "GUEST"
+              ? "user"
+              : "assistant",
+          content: msg.content,
+        })),
+        userMessageObj,
+      ];
 
       await sendMessageToAI(
         setIsRegisterModalOpen,
         parseInt(currentChatId, 10),
-        messages,
+        messagesToSend,
         (chunk: string) => {
           printMessage(chunk);
         }
@@ -289,7 +274,10 @@ function App() {
     } catch (error) {
       setIsRegisterModalOpen(true);
       console.error("Ошибка при отправке сообщения:", error);
+      // В случае ошибки сохраняем сообщение пользователя, чтобы оно не пропало
+      setMessages((prevMessages) => [...prevMessages, userMessageObj]);
     }
+    console.log("After sending message, messages:", messages); // Отладка
   };
 
   return (
