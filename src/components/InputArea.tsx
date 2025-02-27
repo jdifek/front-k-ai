@@ -1,8 +1,9 @@
+import React, { useRef, useEffect, KeyboardEvent } from "react";
 import { ArrowUp, Square } from "lucide-react";
 
 interface InputAreaProps {
   stopPrinting: () => void;
-  isPrinting: boolean; // ⬅️ Добавили isTyping
+  isPrinting: boolean;
   messages: {
     role: string;
     content: string;
@@ -10,16 +11,69 @@ interface InputAreaProps {
   input: string;
   setinput: React.Dispatch<React.SetStateAction<string>>;
   handleSendMessageWithStream: (userMessage: string) => Promise<void>;
+  isDarkMode: boolean;
 }
 
 export const InputArea = ({
   messages,
+  isDarkMode,
   stopPrinting,
   input,
   isPrinting,
   setinput,
   handleSendMessageWithStream,
 }: InputAreaProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Handle automatic resize of the textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      // Reset height to auto to get the correct scrollHeight
+      textareaRef.current.style.height = "0";
+
+      // Set a maximum height (adjust the value as needed)
+      const maxHeight = 200;
+      const scrollHeight = textareaRef.current.scrollHeight;
+
+      // Apply the new height, but cap it at maxHeight
+      textareaRef.current.style.height = `${Math.min(
+        scrollHeight,
+        maxHeight
+      )}px`;
+
+      // Only show scrollbar when content exceeds maxHeight
+      textareaRef.current.style.overflowY =
+        scrollHeight > maxHeight ? "auto" : "hidden";
+    }
+  }, [input]);
+
+  // Handle key press events (Enter and Shift+Enter)
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        // Shift+Enter: Just let the default behavior happen (new line)
+        return;
+      } else {
+        // Enter without shift: Send message
+        e.preventDefault();
+        if (input.trim().length > 0) {
+          handleSendMessageWithStream(input);
+          setinput("");
+        }
+      }
+    }
+  };
+
+  // Function to handle button click
+  const handleButtonClick = () => {
+    if (isPrinting) {
+      stopPrinting();
+    } else if (input.trim().length > 0) {
+      handleSendMessageWithStream(input);
+      setinput("");
+    }
+  };
+
   return (
     <div
       className={`w-full max-w-3xl px-4 ${
@@ -29,60 +83,28 @@ export const InputArea = ({
       }`}
     >
       <div className="relative">
-        <input
-          type="text"
+        <textarea
+          ref={textareaRef}
           placeholder="How can I help you today?"
           value={input}
           onChange={(e) => setinput(e.target.value)}
-          className="w-full p-3 md:p-4 pr-12 rounded-lg bg-[#1F1F1F] dark:bg-[#2F2F2F] border border-gray-700 focus:outline-none focus:border-[#7C3AED] text-gray-200 placeholder-gray-400"
+          onKeyDown={handleKeyDown}
+          rows={1}
+          className={`w-full p-3 md:p-4 pr-12 rounded-lg focus:outline-none focus:border-[#7C3AED] placeholder-gray-400 resize-none ${
+            isDarkMode ? "bg-[#1F1F1F] text-gray-200" : "bg-white text-black"
+          }`}
+          style={{
+            minHeight: "48px",
+            maxHeight: "200px",
+          }}
         />
         <button
-          onClick={() => {
-            if (input.length > 0) handleSendMessageWithStream(input);
-          }}
-          className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-[#7C3AED] rounded-lg hover:bg-[#6D28D9]"
+          onClick={handleButtonClick}
+          className="absolute right-4 top-[45%] transform -translate-y-1/2 p-2 bg-[#7C3AED] rounded-lg hover:bg-[#6D28D9]"
         >
-          {isPrinting ? (
-            <Square
-              onClick={() => {
-                if (isPrinting) {
-                  stopPrinting();
-                } else if (input.length > 0) {
-                  handleSendMessageWithStream(input);
-                }
-              }}
-              size={20}
-            />
-          ) : (
-            <ArrowUp onClick={() => setinput("")} size={20} />
-          )}{" "}
-          {/* ⬅️ Меняем иконку */}
+          {isPrinting ? <Square size={20} /> : <ArrowUp size={20} />}
         </button>
       </div>
-
-      {/* Action Buttons */}
-      {/* <div className="flex flex-wrap justify-center gap-2 md:gap-3 mt-4">
-      <button className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-[#1F1F1F] dark:bg-[#2F2F2F] hover:bg-gray-800 text-gray-300 text-sm">
-        <Image size={18} />
-        <span className="hidden md:inline">Create image</span>
-      </button>
-      <button className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-[#1F1F1F] dark:bg-[#2F2F2F] hover:bg-gray-800 text-gray-300 text-sm">
-        <Code size={18} />
-        <span className="hidden md:inline">Code</span>
-      </button>
-      <button className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-[#1F1F1F] dark:bg-[#2F2F2F] hover:bg-gray-800 text-gray-300 text-sm">
-        <Lightbulb size={18} />
-        <span className="hidden md:inline">Make a plan</span>
-      </button>
-      <button className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-[#1F1F1F] dark:bg-[#2F2F2F] hover:bg-gray-800 text-gray-300 text-sm">
-        <Link size={18} />
-        <span className="hidden md:inline">News</span>
-      </button>
-      <button className="flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg bg-[#1F1F1F] dark:bg-[#2F2F2F] hover:bg-gray-800 text-gray-300 text-sm">
-        <MoreHorizontal size={18} />
-        <span className="hidden md:inline">More</span>
-      </button>
-    </div> */}
     </div>
   );
 };

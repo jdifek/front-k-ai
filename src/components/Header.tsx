@@ -51,7 +51,11 @@ const Header: React.FC<HeaderProps> = ({
           {!isSidebarOpen && <PanelLeftOpen size={20} />}
         </button>
         <span className="text-[#7C3AED] text-xl">✨</span>
-        <span className="text-white ml-2">Fary3.5-Ultra</span>
+        <span
+          className={`${isDarkMode ? "text-white" : "text-black "} ml-2`}
+        >
+          Fary3.5-Ultra
+        </span>
 
         {/* Закомментированный селект */}
         {/* <button

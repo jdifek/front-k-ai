@@ -6,7 +6,7 @@ import {
   PanelLeftOpen,
   Trash2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type SidebarProps = {
   isSidebarOpen: boolean;
@@ -31,6 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   handleDeleteChat,
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   return (
     <div
@@ -73,36 +74,55 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {chats.map((chat) => (
-          <div
-            key={chat.id}
-            onClick={() => navigate(`/chat/${chat.id}`)}
-            className={`flex items-center justify-between px-4 py-3 cursor-pointer ${
-              isDarkMode
-                ? "text-white hover:bg-gray-800"
-                : "text-black hover:bg-gray-200"
-            }`}
-          >
-            <div className=" flex items-center">
-              <Menu
+        {chats.map((chat) => {
+          const isActive = location.pathname === `/chat/${chat.id}`;
+
+          return (
+            <div
+              key={chat.id}
+              onClick={() => navigate(`/chat/${chat.id}`)}
+              className={`flex items-center justify-between px-4 py-3 cursor-pointer ${
+                isActive
+                  ? "bg-[#7C3AED] text-white"
+                  : isDarkMode
+                  ? "text-white hover:bg-gray-800"
+                  : "text-black hover:bg-gray-200"
+              }`}
+            >
+              <div className=" flex items-center">
+                <Menu
+                  size={20}
+                  className={`mr-2 ${
+                    isActive
+                      ? isDarkMode
+                        ? "text-white"
+                        : "text-black"
+                      : isDarkMode
+                      ? "text-white hover:bg-gray-800"
+                      : "text-black hover:bg-gray-200"
+                  }`}
+                />
+                <span className="mr-2">{chat.id}</span>
+              </div>
+              <Trash2
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteChat(chat.id.toString());
+                }}
                 size={20}
                 className={`mr-2 ${
-                  isDarkMode
-                    ? "text-white hover:bg-gray-800"
-                    : "text-black hover:bg-gray-200"
-                }`}
+                  isActive
+                    ? isDarkMode
+                      ? "text-white"
+                      : "text-black"
+                    : isDarkMode
+                    ? "text-white"
+                    : "text-black"
+                } hover:text-red-500`}
               />
-              <span className="mr-2">{chat.id}</span>
             </div>
-            <Trash2
-              onClick={() => handleDeleteChat(chat.id)}
-              size={20}
-              className={`mr-2 ${
-                !isDarkMode ? "text-black" : "text-white"
-              } hover:text-red-500`}
-            />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -20,16 +20,39 @@ export const LoginModal = ({
 }: LoginModalProps) => {
   const [inputPassword, setinputPassword] = useState("");
   const [inputEmail, setinputEmail] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+    {}
+  );
 
-  const handleLoginUser = (email: string, password: string) => {
-    try {
-      loginUser({ email, password });
-      setIsLoginModalOpen(false);
-    } catch {
-      console.log("error");
+  const validateForm = () => {
+    const newErrors: { email?: string; password?: string } = {};
+
+    if (!inputEmail.trim()) {
+      newErrors.email = "Введите email";
+    } else if (!/^[\w.-]+@[a-zA-Z\d.-]+\.[a-zA-Z]{2,}$/.test(inputEmail)) {
+      newErrors.email = "Введите корректный email";
     }
+
+    if (!inputPassword.trim()) {
+      newErrors.password = "Введите пароль";
+    } else if (inputPassword.length < 6) {
+      newErrors.password = "Пароль должен содержать минимум 6 символов";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
+  const handleLoginUser = async () => {
+    if (!validateForm()) return;
+
+    try {
+      await loginUser({ email: inputEmail, password: inputPassword });
+      setIsLoginModalOpen(false);
+    } catch {
+      setErrors({ password: "Неправильный email или пароль" });
+    }
+  };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-[#1F1F1F] p-6 rounded-lg w-full max-w-sm relative">
@@ -55,6 +78,9 @@ export const LoginModal = ({
                 className="w-full pl-10 p-3 rounded-lg bg-[#2F2F2F] border border-gray-700 text-gray-200 placeholder-gray-500"
               />
             </div>
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
           </div>
           <div>
             <div className="relative">
@@ -70,9 +96,12 @@ export const LoginModal = ({
                 className="w-full pl-10 p-3 rounded-lg bg-[#2F2F2F] border border-gray-700 text-gray-200 placeholder-gray-500"
               />
             </div>
+            {errors.password && (
+              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+            )}
           </div>
           <button
-            onClick={() => handleLoginUser(inputEmail, inputPassword)}
+            onClick={() => handleLoginUser()}
             className="w-full py-3 bg-[#7C3AED] rounded-lg font-medium hover:bg-[#6D28D9]"
           >
             Войти

@@ -122,18 +122,19 @@ function App() {
   };
 
   const handleCreateChat = async () => {
-    if (!sessionId) {
-      console.error("Сессия не найдена!");
-      return;
-    }
+    navigate("/chat"); // Переход на стартовую страницу без создания чата
+    // if (!sessionId) {
+    //   console.error("Сессия не найдена!");
+    //   return;
+    // }
 
-    try {
-      const response = await createChat(parseInt(sessionId, 10)); // ✅ Преобразуем sessionId в число
-      console.log("Чат создан:", response.data);
-      initializeChat();
-    } catch (error) {
-      console.error("Ошибка при создании чата:", error);
-    }
+    // try {
+    //   const response = await createChat(parseInt(sessionId, 10)); // ✅ Преобразуем sessionId в число
+    //   console.log("Чат создан:", response.data);
+    //   initializeChat();
+    // } catch (error) {
+    //   console.error("Ошибка при создании чата:", error);
+    // }
   };
 
   const initializeChat = async () => {
@@ -141,28 +142,34 @@ function App() {
       console.error("Сессия не найдена!");
       return;
     }
-
     try {
-      const response = await ChatGet(parseInt(sessionId, 10)); // ✅ Преобразуем в число перед отправкой
-      setChats(response);
-
-      if (response.length === 0) {
-        const newChatResponse = await createChat(parseInt(sessionId, 10));
-        const newChat = newChatResponse.data;
-        const updatedChats = await ChatGet(parseInt(sessionId, 10));
-        setChats(updatedChats);
-
-        if (newChat && newChat.id) {
-          navigate(`/chat/${newChat.id}`);
-        } else {
-          console.error("Ошибка: новый чат не содержит ID!", newChat);
-        }
-      } else {
-        navigate(`/chat/${response[0].id}`);
-      }
+      const response = await ChatGet(parseInt(sessionId, 10));
+      setChats(response); // Просто загружаем список чатов
     } catch (error) {
       console.error("Ошибка при получении чатов:", error);
     }
+
+    // try {
+    //   const response = await ChatGet(parseInt(sessionId, 10));
+    //   setChats(response);
+
+    //   if (response.length === 0) {
+    //     const newChatResponse = await createChat(parseInt(sessionId, 10));
+    //     const newChat = newChatResponse.data;
+    //     const updatedChats = await ChatGet(parseInt(sessionId, 10));
+    //     setChats(updatedChats);
+
+    //     if (newChat && newChat.id) {
+    //       navigate(`/chat/${newChat.id}`);
+    //     } else {
+    //       console.error("Ошибка: новый чат не содержит ID!", newChat);
+    //     }
+    //   } else {
+    //     navigate(`/chat/${response[0].id}`);
+    //   }
+    // } catch (error) {
+    //   console.error("Ошибка при получении чатов:", error);
+    // }
   };
   const handleDeleteChat = async (id: string) => {
     if (!sessionId) {
@@ -231,24 +238,39 @@ function App() {
 
   // Когда приходит новый чанк от AI, используем функцию printMessage
   const handleSendMessageWithStream = async (userMessage: string) => {
-    if (!chatId) {
-      console.error("Chat ID не найден!");
-      return;
+    setinput(""); // Очищаем поле ввода
+
+    let currentChatId = chatId;
+
+    // Если chatId нет, создаем новый чат
+    if (!currentChatId) {
+      if (!sessionId) {
+        console.error("Сессия не найдена!");
+        return;
+      }
+
+      try {
+        const response = await createChat(parseInt(sessionId, 10));
+        currentChatId = response.data.id.toString();
+        navigate(`/chat/${currentChatId}`); // Переходим в новый чат
+        setChats((prevChats) => [...prevChats, response.data]); // Добавляем чат в список
+      } catch (error) {
+        console.error("Ошибка при создании чата:", error);
+        return;
+      }
     }
 
-    setinput(""); // очищаем инпут сразу
-
-    // Добавляем сообщение пользователя в состояние сразу
+    // Добавляем сообщение пользователя
     setMessages((prevMessages) => [
       ...prevMessages,
       { role: "user", content: userMessage },
     ]);
 
     try {
-      const messageHistory = await messageGet(chatId);
+      const messageHistory = await messageGet(currentChatId);
       const messages = messageHistory.map((msg) => ({
         role:
-          msg.senderType === "USER" || msg.senderType === "USER"
+          msg.senderType === "USER" || msg.senderType === "GUEST"
             ? "user"
             : "assistant",
         content: msg.content,
@@ -258,7 +280,7 @@ function App() {
 
       await sendMessageToAI(
         setIsRegisterModalOpen,
-        parseInt(chatId, 10),
+        parseInt(currentChatId, 10),
         messages,
         (chunk: string) => {
           printMessage(chunk);
