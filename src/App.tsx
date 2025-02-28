@@ -14,6 +14,8 @@ import { ForgotPassword } from "./components/ForgotPassword";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import ChatArea from "./components/ChatArea";
+import { ToastContainer } from "react-toastify";
+import { handleGoogleAuthRedirect } from "./services/register/O2Auth";
 
 export type chats = {
   id: number;
@@ -99,8 +101,11 @@ function App() {
   const [messages, setMessages] = useState<{ role: string; content: string }[]>(
     []
   );
-
   useEffect(() => {
+    handleGoogleAuthRedirect(); // Проверяем токен при загрузке страницы
+  }, []);
+  useEffect(() => {
+    setMessages([]); // Очищаем сообщения перед загрузкой новой истории
     if (chatId) {
       loadChatHistory(chatId);
     }
@@ -109,13 +114,26 @@ function App() {
   const loadChatHistory = async (chatId: string) => {
     try {
       const history = await messageGet(chatId);
+      // Фильтруем дубликаты, сравнивая с текущими сообщениями
+      const uniqueHistory = history.filter((msg) => {
+        return !messages.some(
+          (existingMsg) =>
+            existingMsg.role === (msg.senderType === "USER" || msg.senderType === "GUEST" ? "user" : "assistant") &&
+            existingMsg.content === msg.content
+        );
+      });
+  
       setMessages((prevMessages) => [
-        ...prevMessages, // Сохраняем существующие сообщения
-        ...history.map((msg) => ({
-          role:
-            msg.senderType === "USER" || msg.senderType === "GUEST"
-              ? "user"
-              : "assistant",
+        ...prevMessages.filter(
+          (msg) =>
+            !history.some(
+              (histMsg) =>
+                msg.role === (histMsg.senderType === "USER" || histMsg.senderType === "GUEST" ? "user" : "assistant") &&
+                msg.content === histMsg.content
+            )
+        ),
+        ...uniqueHistory.map((msg) => ({
+          role: msg.senderType === "USER" || msg.senderType === "GUEST" ? "user" : "assistant",
           content: msg.content,
         })),
       ]);
@@ -123,7 +141,6 @@ function App() {
       console.error("Ошибка при загрузке истории сообщений:", error);
     }
   };
-
   const handleCreateChat = async () => {
     navigate("/chat"); // Переход на стартовую страницу без создания чата
   };
@@ -210,59 +227,71 @@ function App() {
   const handleSendMessageWithStream = async (userMessage: string) => {
     console.log("Sending message, messages before:", messages); // Отладка
     setinput(""); // Очищаем поле ввода
-
+  
     let currentChatId = chatId;
-
+  
     // Если chatId нет, создаем новый чат
     if (!currentChatId) {
       if (!sessionId) {
         console.error("Сессия не найдена!");
         return;
       }
-
+  
       try {
         const response = await createChat(parseInt(sessionId, 10));
         currentChatId = response.data.id.toString();
-        navigate(`/chat/${currentChatId}`); // Переходим в новый чат
+        navigate(`/chat/${currentChatId}`); // Исправлен синтаксис шаблонной строки
         setChats((prevChats) => [...prevChats, response.data]); // Добавляем чат в список
       } catch (error) {
         console.error("Ошибка при создании чата:", error);
         return;
       }
     }
-
-    // Сохраняем сообщение пользователя в состояние сразу и не перезаписываем его
+  
+    // Сохраняем сообщение пользователя в состояние сразу
     const userMessageObj = { role: "user" as const, content: userMessage };
-    setMessages((prevMessages) => [...prevMessages, userMessageObj]);
-
+    setMessages((prevMessages) => {
+      // Фильтруем дубликаты, сравнивая role и content
+      const isDuplicate = prevMessages.some(
+        (msg) => msg.role === userMessageObj.role && msg.content === userMessageObj.content
+      );
+      if (!isDuplicate) {
+        return [...prevMessages, userMessageObj];
+      }
+      return prevMessages; // Если сообщение уже существует, возвращаем текущее состояние
+    });
+  
     try {
       const messageHistory = await messageGet(currentChatId);
-      // Объединяем историю с нашим сообщением
+      // Фильтруем историю, чтобы исключить дубликаты
+      const uniqueHistory = messageHistory.filter((msg) => {
+        return !messages.some(
+          (existingMsg) =>
+            existingMsg.role === (msg.senderType === "USER" || msg.senderType === "GUEST" ? "user" : "assistant") &&
+            existingMsg.content === msg.content
+        );
+      });
+  
+      // Обновляем сообщения, добавляя только уникальные из истории и новое сообщение пользователя
       setMessages((prevMessages) => [
         ...prevMessages.filter(
-          (msg) => msg.role !== "user" || msg.content !== userMessage
-        ), // Убираем дубликаты
-        ...messageHistory.map((msg) => ({
-          role:
-            msg.senderType === "USER" || msg.senderType === "GUEST"
-              ? "user"
-              : "assistant",
+          (msg) => msg.role !== "user" || msg.content !== userMessage // Убираем дубликаты пользователя
+        ),
+        ...uniqueHistory.map((msg) => ({
+          role: msg.senderType === "USER" || msg.senderType === "GUEST" ? "user" : "assistant",
           content: msg.content,
         })),
-        userMessageObj, // Убеждаемся, что наше сообщение остается
+        userMessageObj, // Добавляем новое сообщение пользователя
       ]);
-
+  
       const messagesToSend = [
-        ...messageHistory.map((msg) => ({
-          role:
-            msg.senderType === "USER" || msg.senderType === "GUEST"
-              ? "user"
-              : "assistant",
+        ...uniqueHistory.map((msg) => ({
+          role: msg.senderType === "USER" || msg.senderType === "GUEST" ? "user" : "assistant",
           content: msg.content,
         })),
         userMessageObj,
       ];
-
+  
       await sendMessageToAI(
         setIsRegisterModalOpen,
         parseInt(currentChatId, 10),
@@ -274,7 +303,7 @@ function App() {
     } catch (error) {
       setIsRegisterModalOpen(true);
       console.error("Ошибка при отправке сообщения:", error);
-      // В случае ошибки сохраняем сообщение пользователя, чтобы оно не пропало
+      // В случае ошибки сохраняем только сообщение пользователя
       setMessages((prevMessages) => [...prevMessages, userMessageObj]);
     }
     console.log("After sending message, messages:", messages); // Отладка
@@ -301,6 +330,7 @@ function App() {
       <div className="flex-1 flex flex-col w-full">
         {/* Header */}
         <Header
+          initializeChat={initializeChat}
           isSidebarOpen={isSidebarOpen}
           setIsSidebarOpen={setIsSidebarOpen}
           isDarkMode={isDarkMode}
@@ -327,10 +357,12 @@ function App() {
           handleSendMessageWithStream={handleSendMessageWithStream}
         />
       </div>
+      <ToastContainer />
 
       {/* Login Modal */}
       {isLoginModalOpen && (
         <LoginModal
+          initializeChat={initializeChat}
           setIsLoginModalOpen={setIsLoginModalOpen}
           setIsRegisterModalOpen={setIsRegisterModalOpen}
           setIsForgotPasswordOpen={setIsForgotPasswordOpen}

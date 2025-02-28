@@ -8,6 +8,7 @@ import { useState } from "react";
 import { loginUser } from "../services/auth/loginUser";
 
 interface LoginModalProps {
+  initializeChat: () => Promise<void>;
   setIsLoginModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setIsRegisterModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setIsForgotPasswordOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -15,6 +16,7 @@ interface LoginModalProps {
 
 export const LoginModal = ({
   setIsLoginModalOpen,
+  initializeChat,
   setIsRegisterModalOpen,
   setIsForgotPasswordOpen,
 }: LoginModalProps) => {
@@ -47,8 +49,12 @@ export const LoginModal = ({
     if (!validateForm()) return;
 
     try {
-      await loginUser({ email: inputEmail, password: inputPassword });
+      await loginUser({
+        email: inputEmail,
+        password: inputPassword,
+      });
       setIsLoginModalOpen(false);
+      initializeChat();
     } catch {
       setErrors({ password: "Неправильный email или пароль" });
     }

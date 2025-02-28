@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { getUserIdFromToken } from "../services/chat/AiMessage";
+import $api from "../services/http";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export const RefreshPassword = () => {
   const navigate = useNavigate(); // Используем useNavigate
@@ -25,13 +27,20 @@ export const RefreshPassword = () => {
     try {
       const token = localStorage.getItem("authToken"); // Или откуда ты хранишь
       const userId = getUserIdFromToken(token);
-      await axios.post("/api/chats/refresh-password", {
+      await $api.post("/api/chats/refresh-password", {
         newPassword: password,
         userId
       });
+      toast.success("Пароль успешно обновлён!");
       setSuccess(true);
+      setPassword("");
+      setConfirmPassword("");
+      setTimeout(() => navigate("/"), 2000);
+
     } catch {
       setError("Ошибка при изменении пароля.");
+      toast.error("Ошибка при изменении пароля.");
+
     }
   };
 

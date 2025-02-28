@@ -1,11 +1,13 @@
 // src/components/Header.tsx
 
 import React from "react";
-import { ChevronDown, PanelLeftOpen } from "lucide-react";
+import { PanelLeftOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 type HeaderProps = {
   isSidebarOpen: boolean;
+  initializeChat: () => Promise<void>;
   setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   isDarkMode: boolean;
   setIsDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
@@ -23,13 +25,14 @@ type HeaderProps = {
 const Header: React.FC<HeaderProps> = ({
   isSidebarOpen,
   setIsSidebarOpen,
+  initializeChat,
   isDarkMode,
   setIsDarkMode,
-  selectedVersion,
-  setIsVersionDropdownOpen,
-  isVersionDropdownOpen,
-  versions,
-  handleVersionSelect,
+  // selectedVersion,
+  // setIsVersionDropdownOpen,
+  // isVersionDropdownOpen,
+  // versions,
+  // handleVersionSelect,
   activeBarProfile,
   setActiveBarProfile,
   token,
@@ -51,9 +54,7 @@ const Header: React.FC<HeaderProps> = ({
           {!isSidebarOpen && <PanelLeftOpen size={20} />}
         </button>
         <span className="text-[#7C3AED] text-xl">✨</span>
-        <span
-          className={`${isDarkMode ? "text-white" : "text-black "} ml-2`}
-        >
+        <span className={`${isDarkMode ? "text-white" : "text-black "} ml-2`}>
           Fary3.5-Ultra
         </span>
 
@@ -111,9 +112,21 @@ const Header: React.FC<HeaderProps> = ({
             >
               <li
                 onClick={() => navigate("/refresh-password")}
-                className="px-2 py-2 text-black cursor-pointer"
+                className="px-2 py-2 text-black cursor-pointer hover:bg-slate-300"
               >
                 Refresh password
+              </li>
+              <li
+                onClick={() => {
+                  localStorage.removeItem("authToken");
+                  toast.success("Вы успешно вышли из системы!");
+
+                  navigate("/");
+                  initializeChat();
+                }}
+                className="px-2 py-2 text-black cursor-pointer hover:bg-slate-300"
+              >
+                Unlogin
               </li>
             </ul>
           </div>
