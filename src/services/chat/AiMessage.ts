@@ -13,6 +13,8 @@ export const sendMessageToAI = async (
   const token = localStorage.getItem("authToken"); // Откуда ты хранишь токен
   const userId = getUserIdFromToken(token);
 
+  console.log('userIdToken' + userId);
+  
   try {
     const response = await $api.post(
       "/api/chats/message",
@@ -117,15 +119,33 @@ export const messageGet = async (chatId: string): Promise<ImessageGet[]> => {
   ).data;
 };
 
-export function getUserIdFromToken(token: string) {
-  if (!token) return null;
+export function getUserIdFromToken(token: string | null) {
+  if (!token) {
+    console.error("Токен отсутствует!");
+    return null;
+  }
+
   try {
-    const base64Url = token.split(".")[1]; // Берём payload
+    console.log("Полученный токен:", token);
+
+    const parts = token.split(".");
+    if (parts.length < 2) {
+      console.error("Некорректный формат токена!");
+      return null;
+    }
+
+    const base64Url = parts[1]; // Берём payload
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+
+    console.log("Декодируем payload:", base64);
+
     const decodedPayload = JSON.parse(atob(base64));
-    return decodedPayload.userId; // Или другой ключ, зависит от бэкенда
+
+    console.log("Расшифрованные данные токена:", decodedPayload);
+
+    return decodedPayload.userId || decodedPayload.id || null; // Если userId нет в токене, вернётся null
   } catch (error) {
-    console.error("Ошибка при декодировании токена", error);
+    console.error("Ошибка при декодировании токена:", error);
     return null;
   }
 }

@@ -25,46 +25,26 @@ export const InputArea = ({
 }: InputAreaProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Handle automatic resize of the textarea
   useEffect(() => {
     if (textareaRef.current) {
-      // Reset height to auto to get the correct scrollHeight
       textareaRef.current.style.height = "0";
-
-      // Set a maximum height (adjust the value as needed)
       const maxHeight = 200;
       const scrollHeight = textareaRef.current.scrollHeight;
-
-      // Apply the new height, but cap it at maxHeight
-      textareaRef.current.style.height = `${Math.min(
-        scrollHeight,
-        maxHeight
-      )}px`;
-
-      // Only show scrollbar when content exceeds maxHeight
-      textareaRef.current.style.overflowY =
-        scrollHeight > maxHeight ? "auto" : "hidden";
+      textareaRef.current.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
+      textareaRef.current.style.overflowY = scrollHeight > maxHeight ? "auto" : "hidden";
     }
   }, [input]);
 
-  // Handle key press events (Enter and Shift+Enter)
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter") {
-      if (e.shiftKey) {
-        // Shift+Enter: Just let the default behavior happen (new line)
-        return;
-      } else {
-        // Enter without shift: Send message
-        e.preventDefault();
-        if (input.trim().length > 0) {
-          handleSendMessageWithStream(input);
-          setinput("");
-        }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (input.trim().length > 0) {
+        handleSendMessageWithStream(input);
+        setinput("");
       }
     }
   };
 
-  // Function to handle button click
   const handleButtonClick = () => {
     if (isPrinting) {
       stopPrinting();
@@ -93,14 +73,14 @@ export const InputArea = ({
           className={`w-full p-3 md:p-4 pr-12 rounded-lg focus:outline-none focus:border-[#7C3AED] placeholder-gray-400 resize-none ${
             isDarkMode ? "bg-[#1F1F1F] text-gray-200" : "bg-white text-black"
           }`}
-          style={{
-            minHeight: "48px",
-            maxHeight: "200px",
-          }}
+          style={{ minHeight: "48px", maxHeight: "200px" }}
         />
         <button
           onClick={handleButtonClick}
-          className="absolute right-4 top-[45%] transform -translate-y-1/2 p-2 bg-[#7C3AED] rounded-lg hover:bg-[#6D28D9]"
+          disabled={!isPrinting && input.trim().length === 0}
+          className={`absolute right-4 top-[45%] transform -translate-y-1/2 p-2 rounded-lg ${
+            isPrinting ? "bg-red-500 hover:bg-red-600" : "bg-[#7C3AED] hover:bg-[#6D28D9]"
+          } ${!isPrinting && input.trim().length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           {isPrinting ? <Square size={20} /> : <ArrowUp size={20} />}
         </button>
@@ -108,3 +88,4 @@ export const InputArea = ({
     </div>
   );
 };
+
