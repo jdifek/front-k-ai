@@ -4,13 +4,71 @@ import {
   registerWithGoogle,
   registerWithVK,
 } from "../services/register/O2Auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { registerUser } from "../services/auth/registerAuth";
 
 interface RegisterModalProps {
   setIsRegisterModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   setIsLoginModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
+
+const LoadingAnimation = ({ isDarkMode = true }) => {
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((prevProgress) => {
+        // Slow down progress as it approaches 100%
+        const increment = Math.max(0.5, (100 - prevProgress) / 20);
+        const newProgress = prevProgress + increment;
+        return newProgress >= 100 ? 0 : newProgress;
+      });
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // We're using dark mode colors since your login modal has a dark theme
+  const textColor = "text-gray-200";
+  const pulseColor = "bg-gray-700";
+  const progressColor = "bg-purple-600";
+  const dotColor = "bg-purple-400";
+
+  return (
+    <div className="flex flex-col items-center justify-center w-full py-4 space-y-4">
+      {/* Bouncing dots */}
+      <div className="flex space-x-2">
+        {[0, 1, 2].map((dot) => (
+          <div
+            key={dot}
+            className={`w-2 h-2 rounded-full ${dotColor} animate-bounce`}
+            style={{
+              animationDelay: `${dot * 0.2}s`,
+              animationDuration: "0.8s",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full max-w-md">
+        <div
+          className={`h-1.5 w-full rounded-full ${pulseColor} overflow-hidden`}
+        >
+          <div
+            className={`h-full ${progressColor} rounded-full transition-all duration-300 ease-out`}
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Loading text */}
+      <div className={`${textColor} text-sm font-medium`}>
+        Входим в систему...
+      </div>
+    </div>
+  );
+};
 
 export const RegisterModal = ({
   setIsRegisterModalOpen,
@@ -21,6 +79,7 @@ export const RegisterModal = ({
   const [errors, setErrors] = useState<{ email?: string; password?: string }>(
     {}
   );
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {};
@@ -45,13 +104,15 @@ export const RegisterModal = ({
   const handleRegisterUser = async () => {
     if (!validateForm()) return;
 
-    const success = await registerUser({
-      email: inputEmail,
-      password: inputPassword,
-    });
-
-    if (success) {
-      setIsRegisterModalOpen(false); // Закрываем модалку при успехе
+    try {
+      setIsLoading(true);
+      await registerUser({
+        email: inputEmail,
+        password: inputPassword,
+      });
+      setIsRegisterModalOpen(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -65,76 +126,80 @@ export const RegisterModal = ({
           <X size={20} />
         </button>
         <h2 className="text-2xl font-bold mb-6">Регистрация</h2>
-        <div className="space-y-4">
-          <div>
-            <div className="relative">
-              <Mail
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <input
-                value={inputEmail}
-                onChange={(e) => setinputEmail(e.target.value)}
-                type="email"
-                placeholder="Email адрес"
-                className="w-full pl-10 p-3 rounded-lg bg-[#2F2F2F] border border-gray-700 text-gray-200 placeholder-gray-500"
-              />
+        {isLoading ? (
+          <LoadingAnimation />
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <div className="relative">
+                <Mail
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+                <input
+                  value={inputEmail}
+                  onChange={(e) => setinputEmail(e.target.value)}
+                  type="email"
+                  placeholder="Email адрес"
+                  className="w-full pl-10 p-3 rounded-lg bg-[#2F2F2F] border border-gray-700 text-gray-200 placeholder-gray-500"
+                />
+              </div>
+              {errors.email && (
+                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+              )}
             </div>
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-            )}
-          </div>
-          <div>
-            <div className="relative">
-              <Lock
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <input
-                value={inputPassword}
-                onChange={(e) => setinputPassword(e.target.value)}
-                type="password"
-                placeholder="Пароль"
-                className="w-full pl-10 p-3 rounded-lg bg-[#2F2F2F] border border-gray-700 text-gray-200 placeholder-gray-500"
-              />
+            <div>
+              <div className="relative">
+                <Lock
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={20}
+                />
+                <input
+                  value={inputPassword}
+                  onChange={(e) => setinputPassword(e.target.value)}
+                  type="password"
+                  placeholder="Пароль"
+                  className="w-full pl-10 p-3 rounded-lg bg-[#2F2F2F] border border-gray-700 text-gray-200 placeholder-gray-500"
+                />
+              </div>
+              {errors.password && (
+                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+              )}
             </div>
-            {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-            )}
+            <button
+              onClick={handleRegisterUser}
+              className="w-full py-3 bg-[#7C3AED] rounded-lg font-medium hover:bg-[#6D28D9]"
+            >
+              Зарегистрироваться
+            </button>
+            <p className="text-center text-gray-400 mt-4">
+              Уже есть аккаунт?
+              <button
+                onClick={() => {
+                  setIsRegisterModalOpen(false);
+                  setIsLoginModalOpen(true);
+                }}
+                className="text-[#7C3AED] hover:text-[#6D28D9]"
+              >
+                Войти
+              </button>
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => registerWithGoogle()}
+                className="flex-1 p-3 bg-[#2F2F2F] rounded-lg flex items-center justify-center gap-2 hover:bg-gray-700 text-gray-300"
+              >
+                <FaGoogle size={20} /> Google
+              </button>
+              <button
+                onClick={() => registerWithVK()}
+                className="flex-1 p-3 bg-[#2F2F2F] rounded-lg flex items-center justify-center gap-2 hover:bg-gray-700 text-gray-300"
+              >
+                <FaVk size={20} /> VK
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleRegisterUser}
-            className="w-full py-3 bg-[#7C3AED] rounded-lg font-medium hover:bg-[#6D28D9]"
-          >
-            Зарегистрироваться
-          </button>
-          <p className="text-center text-gray-400 mt-4">
-            Уже есть аккаунт?
-            <button
-              onClick={() => {
-                setIsRegisterModalOpen(false);
-                setIsLoginModalOpen(true);
-              }}
-              className="text-[#7C3AED] hover:text-[#6D28D9]"
-            >
-              Войти
-            </button>
-          </p>
-          <div className="flex gap-4">
-            <button
-              onClick={() => registerWithGoogle()}
-              className="flex-1 p-3 bg-[#2F2F2F] rounded-lg flex items-center justify-center gap-2 hover:bg-gray-700 text-gray-300"
-            >
-              <FaGoogle size={20} /> Google
-            </button>
-            <button
-              onClick={() => registerWithVK()}
-              className="flex-1 p-3 bg-[#2F2F2F] rounded-lg flex items-center justify-center gap-2 hover:bg-gray-700 text-gray-300"
-            >
-              <FaVk size={20} /> VK
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
