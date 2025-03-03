@@ -12,13 +12,14 @@ export const sendMessageToAI = async (
 ) => {
   const token = localStorage.getItem("authToken"); // Откуда ты хранишь токен
   const userId = getUserIdFromToken(token);
+  const sessionId = localStorage.getItem("sessionId");
 
-  console.log('userIdToken' + userId);
-  
+  console.log("userIdToken" + userId);
+
   try {
     const response = await $api.post(
       "/api/chats/message",
-      { chatId, messages, userId },
+      { chatId, messages, userId, sessionId },
       { responseType: "stream" }
     );
 
@@ -55,7 +56,6 @@ export const sendMessageToAI = async (
     });
   }
 };
-
 
 export const createChat = async (sessionId: number) => {
   const token = localStorage.getItem("authToken"); // Или откуда ты хранишь
