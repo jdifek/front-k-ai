@@ -1,8 +1,8 @@
-import React from "react";
-import { materialDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import React, { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import SyntaxHighlighter from "react-syntax-highlighter";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { materialDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { InputArea } from "./InputArea";
 
 type MainContentProps = {
@@ -26,6 +26,35 @@ const ChatArea: React.FC<MainContentProps> = ({
   setinput,
   handleSendMessageWithStream,
 }) => {
+  const [displayedMessage, setDisplayedMessage] = useState(""); // Для анимации текущего сообщения
+
+  // Функция для имитации печати
+  const printMessage = (message: string) => {
+    let i = 0;
+    const cleanMessage = message.replace(/['"]/g, ""); // Убираем лишние кавычки
+    setDisplayedMessage(""); // Очищаем перед началом
+
+    const intervalId = setInterval(() => {
+      setDisplayedMessage(cleanMessage.slice(0, i + 1));
+      i++;
+      if (i >= cleanMessage.length) {
+        clearInterval(intervalId);
+      }
+    }, 50);
+
+    return () => clearInterval(intervalId); // Cleanup для остановки
+  };
+
+  // Обновляем messages с новым сообщением ассистента
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === "assistant" && lastMessage.content !== displayedMessage) {
+        printMessage(lastMessage.content);
+      }
+    }
+  }, [messages]);
+
   return (
     <div
       className={`flex-1 overflow-y-auto flex flex-col justify-center md:p-6 p-4 ${
@@ -43,20 +72,17 @@ const ChatArea: React.FC<MainContentProps> = ({
         </h1>
       )}
 
-      {messages.map((msg, index) => {
-        console.log(msg);
-        return (
+      {messages.map((msg, index) => (
+        <div
+          key={index}
+          className={`flex mb-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+        >
           <div
-            key={index}
-            className={`flex mb-2 ${
-              msg.role === "user" ? "justify-end" : "justify-start"
+            className={`p-3 rounded-lg max-w-[85%] md:max-w-xs ${
+              isDarkMode ? "bg-gray-700 text-white" : "bg-white text-black"
             }`}
           >
-            <div
-              className={`p-3 rounded-lg max-w-[85%] md:max-w-xs ${
-                isDarkMode ? "bg-gray-700 text-white" : "bg-white text-black"
-              }`}
-            >
+            {msg.role === "assistant" && index === messages.length - 1 ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
@@ -79,14 +105,38 @@ const ChatArea: React.FC<MainContentProps> = ({
                   },
                 }}
               >
-                {msg.content || ""}
+                {displayedMessage}
               </ReactMarkdown>
-            </div>
+            ) : (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ inline, className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || "");
+                    return !inline && match ? (
+                      <SyntaxHighlighter
+                        style={materialDark}
+                        language={match[1]}
+                        PreTag="div"
+                        {...props}
+                      >
+                        {String(children).replace(/\n$/, "")}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
+                {msg.content} 
+              </ReactMarkdown>
+            )}
           </div>
-        );
-      })}
+        </div>
+      ))}
 
-      {/* Input Area */}
       <InputArea
         messages={messages}
         input={input}

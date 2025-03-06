@@ -223,90 +223,46 @@ function App() {
     }
   };
 
-  // Когда приходит новый чанк от AI, используем функцию printMessage
   const handleSendMessageWithStream = async (userMessage: string) => {
-    console.log("Sending message, messages before:", messages); // Отладка
     setinput(""); // Очищаем поле ввода
-  
     let currentChatId = chatId;
   
-    // Если chatId нет, создаем новый чат
     if (!currentChatId) {
       if (!sessionId) {
         console.error("Сессия не найдена!");
         return;
       }
-  
       try {
         const response = await createChat(parseInt(sessionId, 10));
         currentChatId = response.data.id.toString();
-        navigate(`/chat/${currentChatId}`); // Исправлен синтаксис шаблонной строки
-        setChats((prevChats) => [...prevChats, response.data]); // Добавляем чат в список
+        navigate(`/chat/${currentChatId}`);
+        setChats((prevChats) => [...prevChats, response.data]);
       } catch (error) {
         console.error("Ошибка при создании чата:", error);
         return;
       }
     }
   
-    // Сохраняем сообщение пользователя в состояние сразу
-    const userMessageObj = { role: "user" as const, content: userMessage };
-    setMessages((prevMessages) => {
-      // Фильтруем дубликаты, сравнивая role и content
-      const isDuplicate = prevMessages.some(
-        (msg) => msg.role === userMessageObj.role && msg.content === userMessageObj.content
-      );
-      if (!isDuplicate) {
-        return [...prevMessages, userMessageObj];
-      }
-      return prevMessages; // Если сообщение уже существует, возвращаем текущее состояние
-    });
+    const userMessageObj = { role: "user", content: userMessage };
+    setMessages((prevMessages) => [...prevMessages, userMessageObj]);
   
     try {
-      const messageHistory = await messageGet(currentChatId);
-      // Фильтруем историю, чтобы исключить дубликаты
-      const uniqueHistory = messageHistory.filter((msg) => {
-        return !messages.some(
-          (existingMsg) =>
-            existingMsg.role === (msg.senderType === "USER" || msg.senderType === "GUEST" ? "user" : "assistant") &&
-            existingMsg.content === msg.content
-        );
-      });
-  
-      // Обновляем сообщения, добавляя только уникальные из истории и новое сообщение пользователя
-      setMessages((prevMessages) => [
-        ...prevMessages.filter(
-          (msg) => msg.role !== "user" || msg.content !== userMessage // Убираем дубликаты пользователя
-        ),
-        ...uniqueHistory.map((msg) => ({
-          role: msg.senderType === "USER" || msg.senderType === "GUEST" ? "user" : "assistant",
-          content: msg.content,
-        })),
-        userMessageObj, // Добавляем новое сообщение пользователя
-      ]);
-  
-      const messagesToSend = [
-        ...uniqueHistory.map((msg) => ({
-          role: msg.senderType === "USER" || msg.senderType === "GUEST" ? "user" : "assistant",
-          content: msg.content,
-        })),
-        userMessageObj,
-      ];
-  
+      const messagesToSend = [...messages, userMessageObj];
       await sendMessageToAI(
         setIsRegisterModalOpen,
         parseInt(currentChatId, 10),
         messagesToSend,
-        (chunk: string) => {
-          printMessage(chunk);
+        (fullMessage: string) => {
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            { role: "assistant", content: fullMessage },
+          ]);
         }
       );
     } catch (error) {
-      setIsRegisterModalOpen(true);
       console.error("Ошибка при отправке сообщения:", error);
-      // В случае ошибки сохраняем только сообщение пользователя
-      setMessages((prevMessages) => [...prevMessages, userMessageObj]);
+      setIsRegisterModalOpen(true);
     }
-    console.log("After sending message, messages:", messages); // Отладка
   };
 
   return (

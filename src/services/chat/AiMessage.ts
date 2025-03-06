@@ -10,41 +10,26 @@ export const sendMessageToAI = async (
   messages: IsendMessageToAI[],
   onMessage: (message: string) => void
 ) => {
-  const token = localStorage.getItem("authToken"); // Откуда ты хранишь токен
+  const token = localStorage.getItem("authToken");
   const userId = getUserIdFromToken(token);
   const sessionId = localStorage.getItem("sessionId");
 
-  console.log("userIdToken" + userId);
-
   try {
-    const response = await $api.post(
-      "/api/chats/message",
-      { chatId, messages, userId, sessionId },
-      { responseType: "stream" }
-    );
+    const response = await $api.post("/api/chats/message", {
+      chatId,
+      messages,
+      userId,
+      sessionId,
+    });
 
-    if (response.data && response.data.getReader) {
-      const reader = response.data.getReader();
-      const decoder = new TextDecoder();
-      let message = "";
+    // Получаем полный ответ от сервера
+    const fullMessage = response.data.message;
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const decodedText = decoder.decode(value, { stream: true });
-        message += decodedText;
-
-        onMessage(message);
-      }
-    } else {
-      onMessage(response.data);
-    }
+    // Передаем полный ответ в функцию onMessage
+    onMessage(fullMessage);
   } catch (error: any) {
     onRegisterOpen(true);
     console.error("Ошибка при получении ответа от AI:", error);
-
-    // Показываем тост с ошибкой
     toast.error("Ошибка: необходимо авторизоваться!", {
       position: "top-right",
       autoClose: 3000,
